@@ -67,16 +67,9 @@ function cleanData(input) {
 }
 
 function extractText(responseData) {
-  const output = Array.isArray(responseData.output) ? responseData.output : [];
-  const chunks = [];
-  for (const item of output) {
-    if (item && item.type === "message" && Array.isArray(item.content)) {
-      for (const part of item.content) {
-        if (part && part.type === "output_text" && typeof part.text === "string") chunks.push(part.text);
-      }
-    }
-  }
-  return chunks.join("\n").trim();
+  const choices = Array.isArray(responseData.choices) ? responseData.choices : [];
+  const message = choices[0] && choices[0].message;
+  return message && typeof message.content === "string" ? message.content.trim() : "";
 }
 
 export default {
@@ -119,7 +112,7 @@ export default {
     const inputText = "Elabore uma proposta de PEI com base exclusivamente nestes dados pedagógicos. Não complete informações ausentes por suposição:\n\n" + JSON.stringify(data, null, 2);
 
     try {
-      const aiResponse = await fetch("https://api.groq.com/openai/v1/responses", {
+      const aiResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
         headers: {
           "Authorization": "Bearer " + env.GROQ_API_KEY,
@@ -127,9 +120,12 @@ export default {
         },
         body: JSON.stringify({
           model: env.GROQ_MODEL || DEFAULT_MODEL,
-          instructions: INSTRUCTIONS,
-          input: inputText,
-          max_output_tokens: 5500
+          messages: [
+            { role: "system", content: INSTRUCTIONS },
+            { role: "user", content: inputText }
+          ],
+          max_completion_tokens: 5500,
+          reasoning_effort: "low"
         })
       });
 
