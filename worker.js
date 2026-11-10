@@ -458,7 +458,7 @@ function normalizeBnccOutput(text, bnccReferences) {
 
 const MAX_DOCUMENT_TOTAL_BYTES = 12 * 1024 * 1024;
 const MAX_SINGLE_DOCUMENT_BYTES = 6 * 1024 * 1024;
-const GEMINI_MODEL = "gemini-2.5-flash";
+const GEMINI_MODEL = "gemini-3.8-flash";
 
 function bytesToBase64(bytes) {
   let binary = "";
