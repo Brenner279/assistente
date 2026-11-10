@@ -1,0 +1,105 @@
+name: Sincronizar base estruturada da BNCC
+
+on:
+  push:
+    paths:
+      - ".github/workflows/sync-bncc.yml"
+  workflow_dispatch:
+  schedule:
+    - cron: "23 6 15 * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-bncc-data
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+
+      - name: Obter versão estável mais recente da BNCC estruturada
+        id: release
+        shell: bash
+        run: |
+          set -euo pipefail
+          RELEASE_JSON="$(curl -fsSL \
+            -H "Accept: application/vnd.github+json" \
+            -H "User-Agent: PEI-Inteligente-BNCC-Sync" \
+            https://api.github.com/repos/bncc-dev/bncc-dados/releases/latest)"
+          TAG="$(printf '%s' "$RELEASE_JSON" | jq -r '.tag_name')"
+          if [[ -z "$TAG" || "$TAG" == "null" || ! "$TAG" =~ ^[A-Za-z0-9._-]+$ ]]; then
+            echo "Não foi possível identificar uma versão estável válida."
+            exit 1
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Versão selecionada: $TAG"
+
+      - name: Sincronizar arquivos JSON e licença
+        env:
+          DATA_TAG: ${{ steps.release.outputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          UPSTREAM="https://raw.githubusercontent.com/bncc-dev/bncc-dados/${DATA_TAG}"
+          TARGET="data/bncc/releases/${DATA_TAG}"
+
+          mkdir -p "$TARGET/dados/bncc-2018" "$TARGET/dados/computacao-2022"
+
+          FILES=(
+            "dados/bncc-2018/educacao-infantil.json"
+            "dados/bncc-2018/ensino-fundamental.json"
+            "dados/bncc-2018/ensino-medio.json"
+            "dados/bncc-2018/estrutura.json"
+            "dados/computacao-2022/computacao.json"
+            "dados/LICENSE.md"
+          )
+
+          for FILE in "${FILES[@]}"; do
+            mkdir -p "$TARGET/$(dirname "$FILE")"
+            echo "Baixando $FILE"
+            curl --fail --location --retry 3 --retry-delay 2 \
+              "$UPSTREAM/$FILE" -o "$TARGET/$FILE"
+            test -s "$TARGET/$FILE"
+          done
+
+          jq -n \
+            --arg version "$DATA_TAG" \
+            --arg upstream "https://github.com/bncc-dev/bncc-dados" \
+            --arg release "https://github.com/bncc-dev/bncc-dados/releases/tag/$DATA_TAG" \
+            --arg license "CC BY 4.0" \
+            --arg attribution "bncc.dev (mantido pela Profy)" \
+            --arg updated "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            '{
+              version: $version,
+              source_repository: $upstream,
+              source_release: $release,
+              data_license: $license,
+              attribution: $attribution,
+              synchronized_at: $updated,
+              files: [
+                "dados/bncc-2018/educacao-infantil.json",
+                "dados/bncc-2018/ensino-fundamental.json",
+                "dados/bncc-2018/ensino-medio.json",
+                "dados/bncc-2018/estrutura.json",
+                "dados/computacao-2022/computacao.json"
+              ]
+            }' > data/bncc/current.json
+
+      - name: Registrar atualização no repositório
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- data/bncc; then
+            echo "A base BNCC já está atualizada."
+            exit 0
+          fi
+          git add data/bncc
+          git commit -m "Atualiza base estruturada da BNCC"
+          git push
