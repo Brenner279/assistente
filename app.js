@@ -235,6 +235,69 @@
     }
   }
 
+  const manualModeBtn = document.getElementById("manualModeBtn");
+  const documentsModeBtn = document.getElementById("documentsModeBtn");
+  const formPanel = document.querySelector(".form-panel");
+  const uploadPanel = document.getElementById("documentUploadPanel");
+  const documentsForm = document.getElementById("documentsForm");
+  const documentsBtn = document.getElementById("generateDocumentsBtn");
+  function setGenerationMode(mode) {
+    const manual = mode === "manual";
+    formPanel.hidden = !manual;
+    uploadPanel.hidden = manual;
+    manualModeBtn.classList.toggle("active", manual);
+    documentsModeBtn.classList.toggle("active", !manual);
+    manualModeBtn.setAttribute("aria-pressed", String(manual));
+    documentsModeBtn.setAttribute("aria-pressed", String(!manual));
+    setStatus(manual ? "Modo de preenchimento manual selecionado." : "Modo de envio de documentos selecionado.", "");
+  }
+  manualModeBtn.addEventListener("click", function () { setGenerationMode("manual"); });
+  documentsModeBtn.addEventListener("click", function () { setGenerationMode("documents"); });
+
+  documentsForm.addEventListener("submit", async function (event) {
+    event.preventDefault();
+    const fields = [
+      ["entrevista_pais", document.getElementById("parentInterview").files[0]],
+      ["anamnese_aluno", document.getElementById("studentAnamnesis").files[0]],
+      ["relatorio_coordenacao", document.getElementById("coordinationReport").files[0]]
+    ].filter(function (item) { return !!item[1]; });
+    if (!fields.length) { setStatus("Selecione pelo menos um documento PDF.", "error"); return; }
+    let total = 0;
+    for (const item of fields) {
+      const file = item[1];
+      if (file.type !== "application/pdf" && !/\.pdf$/i.test(file.name)) {
+        setStatus("O arquivo '" + file.name + "' não parece ser um PDF válido.", "error"); return;
+      }
+      if (file.size > 6 * 1024 * 1024) {
+        setStatus("Cada PDF deve ter no máximo 6 MB.", "error"); return;
+      }
+      total += file.size;
+    }
+    if (total > 12 * 1024 * 1024) { setStatus("O tamanho total dos PDFs não pode ultrapassar 12 MB.", "error"); return; }
+    documentsBtn.disabled = true;
+    documentsBtn.textContent = "Analisando documentos...";
+    setStatus("Os documentos estão sendo enviados para análise. Aguarde; arquivos maiores podem levar alguns instantes.", "");
+    try {
+      const payload = new FormData();
+      fields.forEach(function (item) { payload.append(item[0], item[1], item[1].name); });
+      const endpoint = API_URL.replace("/gerar-pei", "/gerar-pei-documentos");
+      const response = await fetch(endpoint, {method:"POST", body:payload});
+      const result = await response.json().catch(function () { return {}; });
+      if (!response.ok) throw new Error(result.error || "Não foi possível analisar os documentos.");
+      if (!result.pei || typeof result.pei !== "string") throw new Error("A resposta da IA veio em formato inesperado.");
+      showReport(result.pei, "PEI gerado a partir dos documentos. Revise e valide as informações antes de utilizar.", "ready");
+    } catch (error) {
+      setStatus(error.message || "Falha na análise dos documentos.", "error");
+    } finally {
+      documentsBtn.disabled = false;
+      documentsBtn.textContent = "✦ Analisar documentos e gerar PEI";
+    }
+  });
+  document.getElementById("clearDocumentsBtn").addEventListener("click", function () {
+    documentsForm.reset();
+    setStatus("Arquivos selecionados removidos.", "");
+  });
+
   form.addEventListener("submit",function (event) {
     event.preventDefault(); const data = collectData(); if (validate(data)) generateAI(data);
   });
