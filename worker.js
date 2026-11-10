@@ -95,11 +95,18 @@ export default {
     if (origin && !headers["Access-Control-Allow-Origin"]) return json({error:"Origem não autorizada."}, 403, headers);
     if (!env.OPENAI_API_KEY) return json({error:"A chave da API ainda não foi configurada no servidor."}, 503, headers);
 
-    const length = Number(request.headers.get("Content-Length") || 0);
-    if (length > MAX_BODY_BYTES) return json({error:"O formulário ultrapassou o tamanho permitido."}, 413, headers);
+    const declaredLength = Number(request.headers.get("Content-Length") || 0);
+    if (declaredLength > MAX_BODY_BYTES) return json({error:"O formulário ultrapassou o tamanho permitido."}, 413, headers);
+
+    let rawBody;
+    try { rawBody = await request.text(); }
+    catch (_) { return json({error:"Não foi possível ler os dados enviados."}, 400, headers); }
+    if (new TextEncoder().encode(rawBody).length > MAX_BODY_BYTES) {
+      return json({error:"O formulário ultrapassou o tamanho permitido."}, 413, headers);
+    }
 
     let body;
-    try { body = await request.json(); }
+    try { body = JSON.parse(rawBody); }
     catch (_) { return json({error:"Não foi possível ler os dados enviados."}, 400, headers); }
 
     let data;
