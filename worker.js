@@ -468,10 +468,10 @@ export default {
       observacao:bnccReferences.note || "",
       candidatos_recuperados:bnccReferences.matches || []
     };
-    const inputText = "Elabore uma proposta de PEI com base exclusivamente nestes dados pedagógicos. Não complete informações ausentes por suposição. A seção de referências BNCC deve usar somente os candidatos recuperados abaixo; a aplicação também fará uma inserção determinística desses registros.\\n\\nDADOS PEDAGÓGICOS:\\n" +
+    const inputText = "Elabore uma proposta de PEI com base exclusivamente nestes dados pedagógicos. Não complete informações ausentes por suposição. A seção de referências BNCC deve usar somente os candidatos recuperados abaixo; a aplicação também fará uma inserção determinística desses registros.\n\nDADOS PEDAGÓGICOS:\n" +
       JSON.stringify(data, null, 2) +
-      "\\n\\nBNCC_REFERENCIAS_RECUPERADAS (FONTE ESTRUTURADA; NÃO INVENTAR OUTRAS):\\n" +
-      JSON.stringify(bnccContext, null, 2)
+      "\n\nBNCC_REFERENCIAS_RECUPERADAS (FONTE ESTRUTURADA; NÃO INVENTAR OUTRAS):\n" +
+      JSON.stringify(bnccContext, null, 2);
 
     try {
       const aiResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
