@@ -1,7 +1,6 @@
 (function () {
   "use strict";
   const form = document.getElementById("peiForm");
-  const apiInput = document.getElementById("apiUrl");
   const status = document.getElementById("status");
   const statusText = document.getElementById("statusText");
   const report = document.getElementById("reportContent");
@@ -210,19 +209,10 @@
     if (!ok) setStatus("Preencha pelo menos um campo sobre potencialidades, barreiras, conteúdo ou objetivo.","error");
     return ok;
   }
-  const DEFAULT_API_URL = "https://pei-inteligente-api.michel-brenner279.workers.dev/gerar-pei";
-  function apiUrl() {
-    const saved = (localStorage.getItem("peiApiUrl") || "").trim();
-    if (!saved || saved === "https://assistente.michel-brenner279.workers.dev" || saved === "https://assistente.michel-brenner279.workers.dev/gerar-pei") return DEFAULT_API_URL;
-    return saved;
-  }
+  const API_URL = "https://pei-inteligente-api.michel-brenner279.workers.dev/gerar-pei";
 
   async function generateAI(data) {
-    const endpoint = apiUrl();
-    if (!endpoint) {
-      setStatus("A IA ainda não está conectada. Configure o endereço do Worker ou use o modelo demonstrativo.","error");
-      document.querySelector("details.config").open = true; apiInput.focus(); return;
-    }
+    const endpoint = API_URL;
     try {
       const parsed = new URL(endpoint);
       if (parsed.protocol !== "https:") throw new Error("Por segurança, a API precisa utilizar HTTPS.");
@@ -250,16 +240,6 @@
   document.getElementById("previewBtn").addEventListener("click",function () {
     const data = collectData(); if (validate(data)) showReport(makeDemo(data),"Modelo demonstrativo criado localmente. Este exemplo não utiliza IA.","ready");
   });
-  document.getElementById("saveApiBtn").addEventListener("click",function () {
-    const url = apiInput.value.trim();
-    if (!url) { localStorage.removeItem("peiApiUrl"); document.getElementById("apiConfigMessage").textContent = "Endereço removido. A IA ficará desconectada."; setStatus("Endereço da API removido.",""); return; }
-    try {
-      const parsed = new URL(url); if (parsed.protocol !== "https:") throw new Error("HTTPS obrigatório");
-      localStorage.setItem("peiApiUrl",url);
-      document.getElementById("apiConfigMessage").textContent = "Endereço salvo neste navegador. A chave de API permanece no servidor.";
-      setStatus("Endereço da API salvo. A conexão será testada ao gerar o PEI.","ready");
-    } catch (_) { document.getElementById("apiConfigMessage").textContent = "Informe uma URL HTTPS válida."; setStatus("URL inválida. Informe o endereço HTTPS do Worker.","error"); }
-  });
   copyBtn.addEventListener("click",async function () {
     if (!currentReport) return;
     try { await navigator.clipboard.writeText(currentReport); setStatus("Relatório copiado para a área de transferência.","ready"); }
@@ -273,6 +253,4 @@
     setStatus("Formulário limpo. Esta página não salva as informações dos estudantes.","");
     document.getElementById("formulario").scrollIntoView({behavior:"smooth",block:"start"});
   });
-  apiInput.value = apiUrl();
-  if (apiUrl()) document.getElementById("apiConfigMessage").textContent = "Endereço salvo neste navegador. A chave de API permanece no servidor.";
 })();
