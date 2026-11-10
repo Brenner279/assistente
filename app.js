@@ -262,7 +262,7 @@
       ["relatorio_coordenacao", document.getElementById("coordinationReport").files[0]]
     ].filter(function (item) { return !!item[1]; });
     if (!fields.length) { setStatus("Selecione pelo menos um documento PDF.", "error"); return; }
-    if (!document.getElementById("documentConsent").checked) { setStatus("Confirme a autorização e a ciência sobre o envio ao Google Gemini.", "error"); return; }
+    if (!document.getElementById("documentConsent").checked) { setStatus("Confirme a autorização e a ciência sobre o envio à Cloudflare Workers AI.", "error"); return; }
     let total = 0;
     for (const item of fields) {
       const file = item[1];
