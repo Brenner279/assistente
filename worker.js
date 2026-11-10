@@ -476,22 +476,53 @@ function extractGeminiText(payload) {
 }
 
 async function callGemini(apiKey, parts, jsonMode) {
-  const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + GEMINI_MODEL + ":generateContent", {
-    method:"POST",
-    headers:{"x-goog-api-key":apiKey,"Content-Type":"application/json"},
-    body:JSON.stringify({
-      contents:[{role:"user",parts:parts}],
-      generationConfig:Object.assign({temperature:0.2,maxOutputTokens:8192}, jsonMode ? {responseMimeType:"application/json"} : {})
-    })
-  });
-  const payload = await response.json().catch(function () { return {}; });
-  if (!response.ok) {
-    const message = payload && payload.error && payload.error.message;
-    throw new Error(message || "O Gemini não conseguiu processar os documentos.");
+  const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/" + GEMINI_MODEL + ":generateContent";
+  const generationConfig = Object.assign(
+    {maxOutputTokens:8192},
+    jsonMode ? {responseMimeType:"application/json"} : {}
+  );
+  const maxAttempts = 3;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    let response;
+    try {
+      response = await fetch(endpoint, {
+        method:"POST",
+        headers:{"x-goog-api-key":apiKey,"Content-Type":"application/json"},
+        body:JSON.stringify({
+          contents:[{role:"user",parts:parts}],
+          generationConfig:generationConfig
+        })
+      });
+    } catch (error) {
+      if (attempt === maxAttempts - 1) {
+        throw new Error("Falha de conexão com o Gemini após " + maxAttempts + " tentativas: " + (error.message || "erro de rede") + ".");
+      }
+      const delay = 1000 * Math.pow(2, attempt) + Math.floor(Math.random() * 300);
+      await new Promise(function (resolve) { setTimeout(resolve, delay); });
+      continue;
+    }
+
+    const payload = await response.json().catch(function () { return {}; });
+    if (!response.ok) {
+      const message = payload && payload.error && payload.error.message;
+      const retryable = [408,429,500,502,503,504].includes(response.status);
+      if (retryable && attempt < maxAttempts - 1) {
+        const retryAfter = Number(response.headers.get("Retry-After") || 0) * 1000;
+        const backoff = 1000 * Math.pow(2, attempt) + Math.floor(Math.random() * 300);
+        const delay = Math.min(10000, Math.max(retryAfter, backoff));
+        await new Promise(function (resolve) { setTimeout(resolve, delay); });
+        continue;
+      }
+      throw new Error((message || "O Gemini não conseguiu processar os documentos.") + " (HTTP " + response.status + ").");
+    }
+
+    const text = extractGeminiText(payload);
+    if (!text) throw new Error("O Gemini não retornou conteúdo para esta solicitação.");
+    return text;
   }
-  const text = extractGeminiText(payload);
-  if (!text) throw new Error("O Gemini não retornou conteúdo para esta solicitação.");
-  return text;
+
+  throw new Error("O Gemini permaneceu indisponível após as tentativas automáticas.");
 }
 
 function parseGeminiJson(text) {
