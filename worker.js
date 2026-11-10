@@ -58,6 +58,56 @@ function extractText(responseData) {
   return message && typeof message.content === "string" ? message.content.trim() : "";
 }
 
+function normalizeBnccOutput(text, data) {
+  const suppliedCode = String(data && data.codigo_bncc || "").trim();
+  const suppliedDescription = String(data && data.descricao_bncc || "").trim();
+  const allowedCode = suppliedCode.toUpperCase().replace(/\\s+/g, "");
+  const codePattern = /\\b(?:EI\\d{2}[A-Z]{2}\\d{2}|EF\\d{2}[A-Z]{2}\\d{2,3}|EM13[A-Z]{2,3}\\d{2,3})\\b/gi;
+
+  // Remove sections and individual lines in which the model tries to create BNCC references.
+  // The only reference reinserted below is the exact material supplied by the teacher.
+  const lines = String(text || "").split(/\\r?\\n/);
+  const safeLines = [];
+  let skippedHeadingLevel = 0;
+
+  for (const line of lines) {
+    const heading = line.match(/^(#{1,6})\\s+(.+)$/);
+    if (heading) {
+      const level = heading[1].length;
+      const headingText = heading[2];
+      if (skippedHeadingLevel && level <= skippedHeadingLevel) skippedHeadingLevel = 0;
+      if (/BNCC|Base Nacional Comum Curricular|alinhamento curricular oficial/i.test(headingText)) {
+        skippedHeadingLevel = level;
+        continue;
+      }
+      if (skippedHeadingLevel) continue;
+    } else if (skippedHeadingLevel) {
+      continue;
+    }
+
+    if (/BNCC|Base Nacional Comum Curricular/i.test(line)) continue;
+    if (codePattern.test(line)) {
+      codePattern.lastIndex = 0;
+      // Keep a line only when it contains exactly the code the teacher supplied.
+      const matches = line.match(codePattern) || [];
+      codePattern.lastIndex = 0;
+      if (!allowedCode || matches.some(function (match) { return match.toUpperCase() !== allowedCode; })) continue;
+    } else {
+      codePattern.lastIndex = 0;
+    }
+    safeLines.push(line);
+  }
+
+  let reference = "## Referência curricular — BNCC\\n";
+  if (suppliedCode) reference += "- **Código informado pelo professor:** " + suppliedCode + "\\n";
+  else reference += "- **Código:** não informado pelo professor.\\n";
+  if (suppliedDescription) reference += "- **Descrição fornecida pelo professor:** " + suppliedDescription + "\\n";
+  else reference += "- **Descrição oficial:** não fornecida; conferir na fonte oficial antes de utilizar.\\n";
+  reference += "\\n*O sistema não valida automaticamente códigos ou descrições da BNCC. Confira a referência no documento oficial e no currículo da rede.*";
+
+  return safeLines.join("\\n").trim() + "\\n\\n" + reference;
+}
+
 export default {
   async fetch(request, env) {
     const origin = request.headers.get("Origin") || "";
@@ -95,7 +145,7 @@ export default {
     const hasContext = Boolean(data.potencialidades || data.barreiras_observadas || data.conteudo_habilidade || data.objetivo_prioritario);
     if (!hasContext) return json({error:"Preencha informações pedagógicas antes de gerar o PEI."}, 422, headers);
 
-    const inputText = "Elabore uma proposta de PEI com base exclusivamente nestes dados pedagógicos. Não complete informações ausentes por suposição. Não crie códigos nem descrições da BNCC. Os campos codigo_bncc e descricao_bncc só podem ser reproduzidos conforme informados pelo professor:\\n\\n" + JSON.stringify(data, null, 2);
+    const inputText = "Elabore uma proposta de PEI com base exclusivamente nestes dados pedagógicos. Não complete informações ausentes por suposição. Não crie códigos nem descrições da BNCC. Os campos codigo_bncc e descricao_bncc só podem ser reproduzidos conforme informados pelo professor:\n\n" + JSON.stringify(data, null, 2);
 
     try {
       const aiResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -125,7 +175,8 @@ export default {
 
       const pei = extractText(responseData);
       if (!pei) return json({error:"A IA não retornou o texto esperado. Tente novamente."}, 502, headers);
-      return json({pei:pei, model:env.GROQ_MODEL || DEFAULT_MODEL}, 200, headers);
+      const safePei = normalizeBnccOutput(pei, data);
+      return json({pei:safePei, model:env.GROQ_MODEL || DEFAULT_MODEL}, 200, headers);
     } catch (_) {
       return json({error:"Falha de comunicação com o serviço Groq. Verifique a conexão e tente novamente."}, 502, headers);
     }
