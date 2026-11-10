@@ -161,8 +161,8 @@ function resolveBnccFilters(structure, stage, data) {
       return name === areaText || name.includes(areaText) || areaText.includes(name);
     }) || null;
   }
-  if (!area && component && component.area) {
-    area = areas.find(function (item) { return item.id === component.area; }) || null;
+  if (component && component.area) {
+    area = areas.find(function (item) { return item.id === component.area; }) || area;
   }
 
   return {component:component, area:area, componentWasProvided:!!componentText, areaWasProvided:!!areaText};
@@ -267,13 +267,17 @@ async function searchBnccReferences(data) {
       });
     }
 
+    let groupWasSpecified = false;
     if (stage === "EI") {
       const groupText = normalizeCurriculumText(data.etapa_ano || "");
       let groupId = null;
       if (/bebe|0 a 1|0 a 1 ano/.test(groupText)) groupId = "ei-grupo-01";
       else if (/bem pequena|1 a 3|1 a 3 anos/.test(groupText)) groupId = "ei-grupo-02";
       else if (/crianca pequena|pre escola|4 a 5|4 a 5 anos/.test(groupText)) groupId = "ei-grupo-03";
-      if (groupId) records = records.filter(function (item) { return item.grupo_etario === groupId; });
+      if (groupId) {
+        groupWasSpecified = true;
+        records = records.filter(function (item) { return item.grupo_etario === groupId; });
+      }
     }
 
     const shouldIncludeComputacao = shouldSearchBnccComputacao(data);
@@ -338,8 +342,8 @@ async function searchBnccReferences(data) {
       note = "As habilidades da BNCC do Ensino Médio são organizadas para o bloco do 1º ao 3º ano; a distribuição por série é definida pelos currículos e pela organização da rede.";
     } else if (stage === "EF" && !year) {
       note = "O ano escolar não foi identificado; a pesquisa foi feita no conjunto do componente/área informado, sem restringir por ano.";
-    } else if (stage === "EI" && records.some(function (item) { return item.grupo_etario; }) && !records.some(function (item) { return item.grupo_etario && /Bebes|pequenas/i.test(item.grupo_etario); })) {
-      note = "Confirme o grupo etário antes de utilizar o alinhamento.";
+    } else if (stage === "EI" && !groupWasSpecified) {
+      note = "O grupo etário não foi identificado no campo etapa/ano; os resultados podem incluir mais de uma faixa e precisam ser conferidos pelo professor.";
     }
 
     return {
