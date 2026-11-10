@@ -19,7 +19,7 @@ Plataforma web de apoio à elaboração de propostas de Plano Educacional Indivi
 - API: Cloudflare Worker, arquivo worker.js.
 - Provedor de IA: GroqCloud.
 - Modelo inicial: `openai/gpt-oss-120b`, configurado em `GROQ_MODEL`.
-- Endpoint: Groq Responses API (`https://api.groq.com/openai/v1/responses`).
+- Endpoint: Groq Chat Completions API (`https://api.groq.com/openai/v1/chat/completions`).
 - Dados: a página não salva os formulários de estudantes no navegador. Apenas o endereço da API é salvo localmente para facilitar a configuração.
 
 ## Publicar a página
