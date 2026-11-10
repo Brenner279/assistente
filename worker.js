@@ -476,55 +476,60 @@ function extractGeminiText(payload) {
 }
 
 async function callGemini(apiKey, parts, jsonMode) {
-  const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/" + GEMINI_MODEL + ":generateContent";
+  const models = [GEMINI_MODEL, "gemini-3.7-flash", "gemini-3.6-flash"];
   const generationConfig = Object.assign(
     {maxOutputTokens:8192},
     jsonMode ? {responseMimeType:"application/json"} : {}
   );
-  const maxAttempts = 3;
+  let lastError = null;
 
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    let response;
-    try {
-      response = await fetch(endpoint, {
-        method:"POST",
-        headers:{"x-goog-api-key":apiKey,"Content-Type":"application/json"},
-        body:JSON.stringify({
-          contents:[{role:"user",parts:parts}],
-          generationConfig:generationConfig
-        })
-      });
-    } catch (error) {
-      if (attempt === maxAttempts - 1) {
-        throw new Error("Falha de conexão com o Gemini após " + maxAttempts + " tentativas: " + (error.message || "erro de rede") + ".");
+  for (let modelIndex = 0; modelIndex < models.length; modelIndex++) {
+    const model = models[modelIndex];
+    const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent";
+
+    for (let attempt = 0; attempt < 2; attempt++) {
+      let response;
+      try {
+        response = await fetch(endpoint, {
+          method:"POST",
+          headers:{"x-goog-api-key":apiKey,"Content-Type":"application/json"},
+          body:JSON.stringify({
+            contents:[{role:"user",parts:parts}],
+            generationConfig:generationConfig
+          })
+        });
+      } catch (error) {
+        lastError = new Error("Falha de conexão com " + model + ": " + (error.message || "erro de rede"));
+        if (attempt === 0) {
+          await new Promise(function (resolve) { setTimeout(resolve, 1500); });
+          continue;
+        }
+        break;
       }
-      const delay = 1000 * Math.pow(2, attempt) + Math.floor(Math.random() * 300);
-      await new Promise(function (resolve) { setTimeout(resolve, delay); });
-      continue;
-    }
 
-    const payload = await response.json().catch(function () { return {}; });
-    if (!response.ok) {
+      const payload = await response.json().catch(function () { return {}; });
+      if (response.ok) {
+        const text = extractGeminiText(payload);
+        if (!text) throw new Error("O Gemini não retornou conteúdo para esta solicitação.");
+        return {text:text,model:model};
+      }
+
       const message = payload && payload.error && payload.error.message;
-      const retryable = [408,429,500,502,503,504].includes(response.status);
-      if (retryable && attempt < maxAttempts - 1) {
-        const retryAfter = Number(response.headers.get("Retry-After") || 0) * 1000;
-        const backoff = 1000 * Math.pow(2, attempt) + Math.floor(Math.random() * 300);
-        const delay = Math.min(10000, Math.max(retryAfter, backoff));
-        await new Promise(function (resolve) { setTimeout(resolve, delay); });
-        continue;
-      }
-      throw new Error((message || "O Gemini não conseguiu processar os documentos.") + " (HTTP " + response.status + ").");
-    }
+      lastError = new Error((message || "O Gemini não conseguiu processar os documentos.") + " (HTTP " + response.status + ", modelo " + model + ").");
+      if (response.status !== 503) throw lastError;
 
-    const text = extractGeminiText(payload);
-    if (!text) throw new Error("O Gemini não retornou conteúdo para esta solicitação.");
-    return text;
+      if (attempt === 0) {
+        const retryAfter = Number(response.headers.get("Retry-After") || 0) * 1000;
+        await new Promise(function (resolve) {
+          setTimeout(resolve, Math.min(8000, Math.max(retryAfter, 2000)));
+        });
+      }
+    }
+    // HTTP 503: tenta o próximo modelo estável disponível na lista.
   }
 
-  throw new Error("O Gemini permaneceu indisponível após as tentativas automáticas.");
+  throw lastError || new Error("Os modelos Gemini configurados estão temporariamente indisponíveis.");
 }
-
 function parseGeminiJson(text) {
   const cleaned = String(text || "").trim().replace(/^\`\`\`(?:json)?\s*/i, "").replace(/\s*\`\`\`$/, "");
   return JSON.parse(cleaned);
@@ -564,8 +569,8 @@ async function handleDocumentGeneration(request, env, headers) {
   let extracted;
   try {
     const extractionParts = [{text:extractionPrompt}].concat(pdfParts);
-    const extractionText = await callGemini(env.GEMINI_API_KEY, extractionParts, true);
-    extracted = parseGeminiJson(extractionText);
+    const extractionResult = await callGemini(env.GEMINI_API_KEY, extractionParts, true);
+    extracted = parseGeminiJson(extractionResult.text);
   } catch (error) {
     return json({error:"Falha ao interpretar os PDFs: " + (error.message || "resposta inválida do Gemini")}, 502, headers);
   }
@@ -597,9 +602,9 @@ async function handleDocumentGeneration(request, env, headers) {
     "\n\nBNCC_REFERENCIAS_RECUPERADAS (NÃO INVENTAR OUTRAS):\n" +
     JSON.stringify(bnccContext, null, 2);
   try {
-    const pei = await callGemini(env.GEMINI_API_KEY, [{text:finalPrompt}], false);
-    const safePei = normalizeBnccOutput(pei, bnccReferences);
-    return json({pei:safePei,model:GEMINI_MODEL,mode:"documentos"}, 200, headers);
+    const peiResult = await callGemini(env.GEMINI_API_KEY, [{text:finalPrompt}], false);
+    const safePei = normalizeBnccOutput(peiResult.text, bnccReferences);
+    return json({pei:safePei,model:peiResult.model,mode:"documentos"}, 200, headers);
   } catch (error) {
     return json({error:"Os documentos foram analisados, mas não foi possível gerar o PEI: " + (error.message || "erro do Gemini")}, 502, headers);
   }
