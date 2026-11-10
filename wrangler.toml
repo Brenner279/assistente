@@ -4,7 +4,7 @@ compatibility_date = "2026-11-10"
 workers_dev = true
 
 [vars]
-OPENAI_MODEL = "gpt-6-luna"
+GROQ_MODEL = "openai/gpt-oss-120b"
 
 # Opcional: configure outra origem HTTPS no painel do Worker.
 # ALLOWED_ORIGIN = "https://seu-dominio.com"
