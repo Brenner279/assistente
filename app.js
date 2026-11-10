@@ -26,7 +26,6 @@
       barreiras_observadas:value("barriers"), conhecimentos_previos:value("priorSkills"),
       apoios_que_funcionam:value("supportNeeds"), area_conhecimento:value("area"),
       componente_curricular:value("subject"), conteudo_habilidade:value("topic"),
-      codigo_bncc:value("bnccCode"), descricao_bncc:value("bnccDescription"),
       objetivo_prioritario:value("goal"), observacoes:value("observations"),
       estrategias_selecionadas:Array.from(form.querySelectorAll('input[name="supports"]:checked')).map(function (el) { return el.value; }),
       recursos_disponiveis:value("resources"), frequencia_acompanhamento:value("frequency"),
