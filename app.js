@@ -287,7 +287,6 @@
             children: runs.length ? runs : [new docx.TextRun({text: cell.textContent || " "})],
             spacing: {after: 60}
           })],
-          verticalAlign: docx.VerticalAlign.TOP
         });
       });
       return new docx.TableRow({children: cells});
@@ -358,7 +357,7 @@
         } else if (tag === "table") {
           children.push(docxTableFromElement(element));
         } else if (tag === "hr") {
-          children.push(new docx.Paragraph({text: " ", thematicBreak: true}));
+          children.push(new docx.Paragraph({text: " "}));
         }
       });
 
@@ -374,7 +373,7 @@
         }));
       }
 
-      const document = new docx.Document({
+      const wordDocument = new docx.Document({
         creator: "PEI Inteligente",
         title: "Proposta de Plano Educacional Individualizado",
         description: "Documento preliminar de apoio pedagógico para revisão da equipe escolar.",
@@ -389,9 +388,9 @@
         }]
       });
 
-      const blob = await docx.Packer.toBlob(document);
+      const blob = await docx.Packer.toBlob(wordDocument);
       const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
+      const link = window.document.createElement("a");
       link.href = url;
       const date = new Date();
       const stamp = date.getFullYear() + "-" +
@@ -399,7 +398,7 @@
         String(date.getDate()).padStart(2, "0");
       link.download = "PEI-Inteligente-" + stamp + ".docx";
       link.style.display = "none";
-      document.body.appendChild(link);
+      window.document.body.appendChild(link);
       link.click();
       link.remove();
       window.setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
