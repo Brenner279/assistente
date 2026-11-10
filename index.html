@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#124f43">
+<meta name="description" content="Ferramenta de apoio ao professor para elaboração de propostas de Plano Educacional Individualizado com apoio de IA.">
+<title>PEI Inteligente | Planejamento inclusivo</title>
+<style>
+:root{--green:#176b57;--dark:#124d42;--mint:#eaf5f0;--paper:#f5f8f6;--ink:#172b28;--muted:#647773;--line:#dce7e1;--gold:#e7b85b}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.55}button,input,select,textarea{font:inherit}
+.top{background:#fff;border-bottom:1px solid var(--line);padding:12px max(20px,calc((100% - 1200px)/2));display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:5}
+.brand{display:flex;align-items:center;gap:11px;font-weight:800;letter-spacing:-.03em}.mark{background:var(--green);color:#fff;border-radius:13px;padding:9px 10px;font-size:14px}.brand small{display:block;font-size:10px;letter-spacing:.1em;color:var(--muted)}
+.top a{font-size:12px;color:var(--dark);font-weight:750;text-decoration:none;margin-left:16px}
+.hero{background:radial-gradient(circle at 85% 10%,#d49a4433,transparent 24%),linear-gradient(115deg,#103f36,#176b57 68%,#27836d);color:#fff;padding:48px 24px}
+.hero-inner{max-width:1200px;margin:auto;display:grid;grid-template-columns:1.3fr .7fr;gap:35px;align-items:center}.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.13em;color:#d9eee6;font-weight:800}
+h1{font-size:clamp(32px,5vw,52px);line-height:1.05;letter-spacing:-.05em;margin:13px 0 16px}.hero p{color:#e0eee9;max-width:700px;font-size:15px;margin:0}
+.hero-note{background:#ffffff14;border:1px solid #ffffff40;border-radius:18px;padding:22px;font-size:13px;color:#e0eee9}.hero-note b{display:block;color:#fff;margin-bottom:7px}
+main{max-width:1200px;margin:28px auto 60px;padding:0 20px}.layout{display:grid;grid-template-columns:1.05fr .95fr;gap:20px;align-items:start}
+.panel{background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:0 12px 35px #14392f0d;overflow:hidden}.panel-head{padding:20px 22px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.panel-head h2{font-size:18px;margin:0;letter-spacing:-.03em}.panel-head p{font-size:11px;color:var(--muted);margin:5px 0 0}.tag{border-radius:30px;background:var(--mint);color:var(--green);font-size:10px;font-weight:800;padding:6px 9px;white-space:nowrap}
+form{padding:20px 22px}fieldset{border:0;padding:0;margin:0 0 23px}legend{font-size:13px;font-weight:800;margin-bottom:12px;display:flex;gap:9px;align-items:center}.num{background:var(--mint);color:var(--green);border-radius:8px;width:24px;height:24px;display:grid;place-items:center;font-size:11px}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{min-width:0}.full{grid-column:1/-1}label{font-size:11px;font-weight:750;display:block;margin-bottom:5px;color:#344943}input,select,textarea{width:100%;background:#fbfdfc;border:1px solid #d5e1db;border-radius:10px;padding:10px 11px;font-size:12px;color:var(--ink);outline:none}input:focus,select:focus,textarea:focus{border-color:#4c9b81;box-shadow:0 0 0 3px #308b6f1f}textarea{min-height:78px;resize:vertical}textarea.short{min-height:60px}.hint{display:block;font-size:10px;color:var(--muted);margin-top:4px}
+.checks{display:grid;grid-template-columns:1fr 1fr;gap:8px}.check{display:flex;gap:7px;padding:8px;border:1px solid var(--line);border-radius:9px;background:#fbfdfc;font-size:10px;color:#40554e}.check input{width:14px;height:14px;margin:1px 0 0;accent-color:var(--green)}
+.notice{margin:10px 0 18px;padding:12px;border-radius:11px;border:1px solid #f0dfb9;background:#fffaf0;color:#6a562a;font-size:10px}.notice b{display:block;margin-bottom:3px}
+.actions,.report-actions{display:flex;gap:8px;flex-wrap:wrap}.btn{border:0;border-radius:10px;padding:10px 13px;font-size:11px;font-weight:800;cursor:pointer}.primary{background:var(--green);color:white}.soft{background:var(--mint);color:var(--dark)}.plain{background:#f2f5f3;color:#40554e;border:1px solid var(--line)}.btn:disabled{opacity:.5;cursor:wait}
+.report-panel{position:sticky;top:78px}.report-head{align-items:center}.report-actions .btn{padding:7px 9px;font-size:10px}.status{padding:10px 15px;background:#f7faf8;border-bottom:1px solid var(--line);font-size:10px;color:var(--muted);display:flex;gap:8px;align-items:center}.dot{width:7px;height:7px;background:#c49b42;border-radius:100%}.status.ready .dot{background:#23956e}.status.error .dot{background:#c34f4f}
+.report-body{padding:22px;min-height:440px}.empty{text-align:center;max-width:300px;margin:85px auto 35px;color:var(--muted)}.empty-icon{background:var(--mint);color:var(--green);width:58px;height:58px;border-radius:18px;display:grid;place-items:center;margin:0 auto 14px;font-size:25px}.empty h3{font-size:15px;color:var(--ink);margin:0 0 6px}.empty p{font-size:11px;margin:0}
+.report-content h2{font-size:16px;color:var(--dark);margin:23px 0 8px;line-height:1.3}.report-content h2:first-child{margin-top:0}.report-content h3{font-size:13px;margin:16px 0 5px}.report-content p,.report-content li{font-size:11px;color:#3c5049}.report-content p{margin:7px 0;white-space:pre-wrap}.report-content ul{padding-left:19px}.report-content li{margin:5px 0}.report-content strong{color:#1d3931}.report-content hr{border:0;border-top:1px solid var(--line);margin:17px 0}
+.disclaimer{background:#f2f7f4;border:1px solid var(--line);border-radius:10px;padding:11px 12px;margin-top:20px;font-size:10px;color:#52665e}
+details.config{border-top:1px solid var(--line);padding-top:13px;margin-top:15px}details summary{cursor:pointer;font-size:11px;font-weight:800;color:var(--dark)}.config-inner{padding-top:10px}.config-inner p{font-size:10px;color:var(--muted)}.config-row{display:flex;gap:7px}.config-row input{flex:1}
+footer{max-width:1200px;margin:auto;padding:0 20px 30px;color:var(--muted);font-size:10px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+@media(max-width:900px){.hero-inner,.layout{grid-template-columns:1fr}.hero-note{max-width:550px}.report-panel{position:static}.report-body{min-height:300px}}
+@media(max-width:560px){.top{padding:10px 14px}.top a:first-child{display:none}.hero{padding:34px 18px}.hero-inner{gap:20px}main{padding:0 12px;margin-top:14px}.panel-head{padding:17px}form{padding:17px}.fields{grid-template-columns:1fr}.full{grid-column:auto}.report-head{display:block}.report-actions{margin-top:10px}.checks{grid-template-columns:1fr 1fr}footer{padding:0 14px 25px}}
+@media print{body{background:#fff}.top,.hero,.form-panel,footer,.report-actions,.status,details.config{display:none!important}main{margin:0;padding:0}.layout{display:block}.report-panel{position:static;border:0;box-shadow:none}.panel-head{padding:0 0 12px;border:0}.report-body{padding:0}.report-content p,.report-content li{font-size:10pt;color:#111}}
+</style>
+</head>
+<body>
+<header class="top"><div class="brand"><span class="mark">PEI</span><span>PEI Inteligente<small>PLANEJAMENTO EDUCACIONAL INCLUSIVO</small></span></div><nav><a href="#formulario">Preencher formulário</a><a href="#relatorio">Ver relatório</a></nav></header>
+<section class="hero"><div class="hero-inner"><div><div class="eyebrow">Educação inclusiva com intencionalidade</div><h1>Planejamento individualizado, com apoio da inteligência artificial.</h1><p>Organize observações pedagógicas, defina objetivos possíveis e receba uma proposta de PEI com estratégias, atividades adaptadas e formas de acompanhamento.</p></div><aside class="hero-note"><b>Uma ferramenta de apoio pedagógico</b>A IA sugere. O professor analisa, adapta e valida. Transforme informações sobre potencialidades, barreiras e objetivos em um planejamento claro, prático e revisável.</aside></div></section>
+<main><div class="layout">
+<section class="panel form-panel" id="formulario"><div class="panel-head"><div><h2>Informações do estudante</h2><p>Preencha os campos com observações pedagógicas objetivas.</p></div><span class="tag">ETAPA 01 / 02</span></div>
+<form id="peiForm">
+<fieldset><legend><span class="num">1</span> Identificação escolar</legend><div class="fields">
+<div class="field"><label for="studentCode">Identificação (opcional)</label><input id="studentCode" maxlength="60" placeholder="Ex.: Estudante A ou código interno"><span class="hint">Prefira iniciais ou código. Não informe nome completo.</span></div>
+<div class="field"><label for="school">Escola</label><input id="school" maxlength="120" placeholder="Nome da instituição"></div>
+<div class="field"><label for="teacher">Professor(a) responsável</label><input id="teacher" maxlength="100" placeholder="Nome do professor"></div>
+<div class="field"><label for="grade">Etapa / ano escolar</label><input id="grade" maxlength="60" placeholder="Ex.: 7º ano do Ensino Fundamental"></div>
+<div class="field"><label for="classGroup">Turma</label><input id="classGroup" maxlength="40" placeholder="Ex.: 7º B"></div>
+<div class="field"><label for="period">Período de vigência do PEI</label><input id="period" maxlength="60" placeholder="Ex.: 1º semestre de 2027"></div>
+</div></fieldset>
+<fieldset><legend><span class="num">2</span> Perfil de aprendizagem</legend><div class="fields">
+<div class="field full"><label for="strengths">Potencialidades e habilidades observadas</label><textarea id="strengths" placeholder="O que o estudante já realiza bem? Quais conhecimentos, habilidades e interesses demonstra?"></textarea></div>
+<div class="field"><label for="interests">Interesses e temas motivadores</label><textarea class="short" id="interests" placeholder="Assuntos, jogos, objetos ou atividades de interesse."></textarea></div>
+<div class="field"><label for="communication">Comunicação e expressão</label><textarea class="short" id="communication" placeholder="Como compreende instruções e expressa ideias, escolhas ou dúvidas?"></textarea></div>
+<div class="field"><label for="autonomy">Autonomia na rotina</label><textarea class="short" id="autonomy" placeholder="Organização, início e conclusão das tarefas, necessidade de apoio."></textarea></div>
+<div class="field"><label for="interaction">Participação e interação</label><textarea class="short" id="interaction" placeholder="Participação individual, em dupla, em grupo e nos diferentes espaços."></textarea></div>
+</div></fieldset>
+<fieldset><legend><span class="num">3</span> Necessidades e barreiras observadas</legend><div class="fields">
+<div class="field full"><label for="barriers">Barreiras que dificultam a aprendizagem ou participação</label><textarea id="barriers" placeholder="Descreva situações observáveis: instruções longas, excesso de estímulos, leitura de enunciados, registro escrito, tempo de execução etc."></textarea></div>
+<div class="field"><label for="priorSkills">Conhecimentos prévios e habilidades em desenvolvimento</label><textarea class="short" id="priorSkills" placeholder="O que já sabe fazer e o que está aprendendo?"></textarea></div>
+<div class="field"><label for="supportNeeds">Apoios que já funcionam</label><textarea class="short" id="supportNeeds" placeholder="Mediação, pistas visuais, material concreto, tempo adicional etc."></textarea></div>
+</div></fieldset>
+<fieldset><legend><span class="num">4</span> Foco curricular e objetivos</legend><div class="fields">
+<div class="field"><label for="area">Área do conhecimento</label><select id="area"><option value="">Selecione</option><option>Linguagens</option><option>Matemática</option><option>Ciências da Natureza</option><option>Ciências Humanas</option><option>Educação Infantil</option><option>Outra / interdisciplinar</option></select></div>
+<div class="field"><label for="subject">Componente curricular</label><input id="subject" maxlength="80" placeholder="Ex.: Matemática"></div>
+<div class="field full"><label for="topic">Conteúdo ou habilidade curricular trabalhada</label><textarea class="short" id="topic" placeholder="Ex.: resolver situações de adição e subtração em contextos do cotidiano."></textarea></div>
+<div class="field full"><label for="goal">Objetivo de aprendizagem prioritário</label><textarea id="goal" placeholder="O que se espera que o estudante aprenda ou consiga realizar ao final do período?"></textarea></div>
+<div class="field full"><label for="observations">Outras observações pedagógicas relevantes</label><textarea class="short" id="observations" placeholder="Registre informações úteis, sem inserir laudos ou dados pessoais sensíveis."></textarea></div>
+</div></fieldset>
+<fieldset><legend><span class="num">5</span> Estratégias e recursos disponíveis</legend>
+<div class="checks">
+<label class="check"><input type="checkbox" name="supports" value="Instruções curtas, objetivas e segmentadas"> Instruções curtas e segmentadas</label>
+<label class="check"><input type="checkbox" name="supports" value="Rotina visual e antecipação das etapas"> Rotina visual e antecipação</label>
+<label class="check"><input type="checkbox" name="supports" value="Imagens, pictogramas e modelos visuais"> Imagens e modelos visuais</label>
+<label class="check"><input type="checkbox" name="supports" value="Materiais concretos e manipuláveis"> Materiais concretos</label>
+<label class="check"><input type="checkbox" name="supports" value="Atividades divididas em pequenas etapas"> Atividades em pequenas etapas</label>
+<label class="check"><input type="checkbox" name="supports" value="Tempo ampliado e pausas planejadas"> Tempo ampliado e pausas</label>
+<label class="check"><input type="checkbox" name="supports" value="Opções variadas de resposta"> Diferentes formas de resposta</label>
+<label class="check"><input type="checkbox" name="supports" value="Tecnologia assistiva ou recurso digital"> Tecnologia assistiva / digital</label>
+<label class="check"><input type="checkbox" name="supports" value="Mediação individual ou em pequenos grupos"> Mediação individual / pequenos grupos</label>
+<label class="check"><input type="checkbox" name="supports" value="Organização do ambiente e redução de distrações"> Organização do ambiente</label>
+</div><div class="fields" style="margin-top:12px">
+<div class="field full"><label for="resources">Materiais e recursos que a escola possui</label><textarea class="short" id="resources" placeholder="Ex.: quadro, papel, jogos, computador, celular, material dourado, livros, figuras..."></textarea></div>
+<div class="field"><label for="frequency">Frequência de acompanhamento</label><select id="frequency"><option>Semanal</option><option>A cada quinze dias</option><option>Mensal</option><option>Bimestral</option></select></div>
+<div class="field"><label for="duration">Duração prevista das atividades</label><input id="duration" maxlength="50" placeholder="Ex.: 20 a 30 minutos"></div></div></fieldset>
+<div class="notice"><b>Proteção de dados e uso responsável</b>Não informe nome completo, CPF, endereço, laudos ou documentos clínicos. Use código ou iniciais. Ao usar a IA, as informações preenchidas serão enviadas ao serviço de IA configurado. Confira as regras da sua rede de ensino e as autorizações aplicáveis.</div>
+<div class="actions"><button class="btn primary" id="generateBtn" type="submit">✦ Gerar proposta com IA</button><button class="btn soft" id="previewBtn" type="button">Visualizar modelo demonstrativo</button><button class="btn plain" id="clearBtn" type="button">Limpar formulário</button></div>
+<details class="config"><summary>Configuração da conexão com a IA</summary><div class="config-inner"><p>Informe o endereço do Worker depois de publicá-lo. A chave da IA fica somente no servidor.</p><label for="apiUrl">Endereço da API (Cloudflare Worker)</label><div class="config-row"><input id="apiUrl" type="url" placeholder="https://seu-worker.seu-subdominio.workers.dev/gerar-pei"><button class="btn soft" id="saveApiBtn" type="button">Salvar</button></div><p id="apiConfigMessage" aria-live="polite">A conexão ainda não foi configurada. O modelo demonstrativo funciona sem IA.</p></div></details>
+</form></section>
+<section class="panel report-panel" id="relatorio"><div class="panel-head report-head"><div><h2>Proposta de PEI</h2><p>O relatório aparecerá nesta área.</p></div><div class="report-actions"><button class="btn plain" id="copyBtn" type="button" disabled>Copiar</button><button class="btn plain" id="printBtn" type="button" disabled>Imprimir / PDF</button></div></div>
+<div class="status" id="status" role="status" aria-live="polite"><span class="dot"></span><span id="statusText">Aguardando informações do formulário.</span></div>
+<div class="report-body"><div class="empty" id="emptyState"><div class="empty-icon">✧</div><h3>Seu planejamento começa aqui</h3><p>Preencha as informações pedagógicas e gere uma proposta. Você também pode abrir um exemplo demonstrativo para conhecer a estrutura do relatório.</p></div><article class="report-content" id="reportContent" hidden></article><div class="disclaimer" id="reportDisclaimer" hidden>Documento de apoio pedagógico. A proposta gerada pela IA deve ser revisada, contextualizada e validada pelo professor e pela equipe escolar. Não constitui diagnóstico nem substitui avaliações especializadas.</div></div></section>
+</div></main>
+<footer><span>PEI Inteligente · Projeto educacional em desenvolvimento.</span><span>Planejamento com respeito às singularidades e ao direito de aprender.</span></footer>
+<script src="app.js"></script>
+</body></html>
