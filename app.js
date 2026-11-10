@@ -139,7 +139,12 @@
     if (!ok) setStatus("Preencha pelo menos um campo sobre potencialidades, barreiras, conteúdo ou objetivo.","error");
     return ok;
   }
-  function apiUrl() { return (localStorage.getItem("peiApiUrl") || "").trim(); }
+  const DEFAULT_API_URL = "https://pei-inteligente-api.michel-brenner279.workers.dev/gerar-pei";
+  function apiUrl() {
+    const saved = (localStorage.getItem("peiApiUrl") || "").trim();
+    if (!saved || saved === "https://assistente.michel-brenner279.workers.dev" || saved === "https://assistente.michel-brenner279.workers.dev/gerar-pei") return DEFAULT_API_URL;
+    return saved;
+  }
 
   async function generateAI(data) {
     const endpoint = apiUrl();
