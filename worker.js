@@ -243,6 +243,17 @@ async function searchBnccReferences(data) {
     const structure = loaded[1];
     const filters = resolveBnccFilters(structure, stage, data);
     const year = stage === "EF" ? detectBnccYear(data.etapa_ano) : null;
+    if (stage !== "EI" && filters.componentWasProvided && !filters.component && !filters.area) {
+      return {
+        available:true,
+        version:version,
+        stage:stage,
+        stage_label:stage === "EF" ? "Ensino Fundamental" : "Ensino Médio",
+        note:"O componente curricular informado não foi reconhecido na estrutura da BNCC e não há área selecionada para restringir a consulta. Nenhuma referência será sugerida.",
+        query:primaryText,
+        matches:[]
+      };
+    }
     let records = stage === "EI"
       ? (dataset.objetivos || []).map(function (item) {
           return Object.assign({}, item, {etapa:"EI", tipo_registro:"Objetivo de aprendizagem e desenvolvimento", documento_origem:"bncc-2018"});
