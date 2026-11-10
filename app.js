@@ -37,27 +37,98 @@
       return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
     });
   }
-  function inline(text) { return escapeHtml(text).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>"); }
+  function inline(text) {
+    return escapeHtml(text)
+      .replace(/`([^`]+)`/g, "<code>$1</code>")
+      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+      .replace(/\*(.+?)\*/g, "<em>$1</em>")
+      .replace(/_(.+?)_/g, "<em>$1</em>");
+  }
   function markdownToHtml(source) {
     const lines = String(source || "").replace(/\r/g, "").split("\n");
     const out = [];
-    let list = false;
-    function closeList() { if (list) { out.push("</ul>"); list = false; } }
-    lines.forEach(function (line) {
-      const s = line.trim();
-      if (!s) { closeList(); return; }
-      if (/^---+$/.test(s)) { closeList(); out.push("<hr>"); return; }
-      if (s.indexOf("### ") === 0) { closeList(); out.push("<h3>" + inline(s.slice(4)) + "</h3>"); return; }
-      if (s.indexOf("## ") === 0) { closeList(); out.push("<h2>" + inline(s.slice(3)) + "</h2>"); return; }
-      if (s.indexOf("# ") === 0) { closeList(); out.push("<h2>" + inline(s.slice(2)) + "</h2>"); return; }
-      if (/^[-*]\s+/.test(s)) {
-        if (!list) { out.push("<ul>"); list = true; }
-        out.push("<li>" + inline(s.replace(/^[-*]\s+/, "")) + "</li>");
-        return;
+    let i = 0;
+    const isTableRow = function (line) { return /^\s*\|?.+\|.+\|?\s*$/.test(line); };
+    const cells = function (line) {
+      return line.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map(function (cell) { return cell.trim(); });
+    };
+    const isTableDivider = function (line) {
+      return /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(line);
+    };
+    while (i < lines.length) {
+      const s = lines[i].trim();
+      if (!s) { i++; continue; }
+      if (/^---+$/.test(s)) { out.push("<hr>"); i++; continue; }
+
+      const heading = s.match(/^(#{1,3})\s+(.+)$/);
+      if (heading) {
+        const level = heading[1].length;
+        out.push("<h" + level + ">" + inline(heading[2]) + "</h" + level + ">");
+        i++; continue;
       }
-      closeList(); out.push("<p>" + inline(s) + "</p>");
-    });
-    closeList(); return out.join("");
+
+      if (i + 1 < lines.length && isTableRow(lines[i]) && isTableDivider(lines[i + 1])) {
+        const headers = cells(lines[i]);
+        out.push('<div class="table-wrap"><table><thead><tr>' +
+          headers.map(function (cell) { return "<th>" + inline(cell) + "</th>"; }).join("") +
+          "</tr></thead><tbody>");
+        i += 2;
+        while (i < lines.length && lines[i].trim() && isTableRow(lines[i])) {
+          const row = cells(lines[i]);
+          out.push("<tr>" + headers.map(function (_, index) {
+            return "<td>" + inline(row[index] || "") + "</td>";
+          }).join("") + "</tr>");
+          i++;
+        }
+        out.push("</tbody></table></div>");
+        continue;
+      }
+
+      if (/^[-*]\s+/.test(s)) {
+        out.push("<ul>");
+        while (i < lines.length && /^\s*[-*]\s+/.test(lines[i])) {
+          out.push("<li>" + inline(lines[i].trim().replace(/^[-*]\s+/, "")) + "</li>");
+          i++;
+        }
+        out.push("</ul>");
+        continue;
+      }
+
+      if (/^\d+[.)]\s+/.test(s)) {
+        out.push("<ol>");
+        while (i < lines.length && /^\s*\d+[.)]\s+/.test(lines[i])) {
+          out.push("<li>" + inline(lines[i].trim().replace(/^\d+[.)]\s+/, "")) + "</li>");
+          i++;
+        }
+        out.push("</ol>");
+        continue;
+      }
+
+      if (/^>\s?/.test(s)) {
+        const quote = [];
+        while (i < lines.length && /^\s*>/.test(lines[i])) {
+          quote.push(inline(lines[i].trim().replace(/^>\s?/, "")));
+          i++;
+        }
+        out.push("<blockquote>" + quote.join("<br>") + "</blockquote>");
+        continue;
+      }
+
+      const paragraph = [s];
+      i++;
+      while (i < lines.length && lines[i].trim() &&
+        !/^(#{1,3})\s+/.test(lines[i].trim()) &&
+        !/^---+$/.test(lines[i].trim()) &&
+        !/^[-*]\s+/.test(lines[i].trim()) &&
+        !/^\d+[.)]\s+/.test(lines[i].trim()) &&
+        !/^>\s?/.test(lines[i].trim()) &&
+        !(i + 1 < lines.length && isTableRow(lines[i]) && isTableDivider(lines[i + 1]))) {
+        paragraph.push(lines[i].trim());
+        i++;
+      }
+      out.push("<p>" + inline(paragraph.join(" ")) + "</p>");
+    }
+    return out.join("");
   }
   function showReport(text, message, kind) {
     currentReport = String(text || "");
