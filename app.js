@@ -9,6 +9,7 @@
   const generateBtn = document.getElementById("generateBtn");
   const copyBtn = document.getElementById("copyBtn");
   const printBtn = document.getElementById("printBtn");
+  const wordBtn = document.getElementById("wordBtn");
   let currentReport = "";
 
   function setStatus(message, kind) {
@@ -25,6 +26,7 @@
       barreiras_observadas:value("barriers"), conhecimentos_previos:value("priorSkills"),
       apoios_que_funcionam:value("supportNeeds"), area_conhecimento:value("area"),
       componente_curricular:value("subject"), conteudo_habilidade:value("topic"),
+      codigo_bncc:value("bnccCode"), descricao_bncc:value("bnccDescription"),
       objetivo_prioritario:value("goal"), observacoes:value("observations"),
       estrategias_selecionadas:Array.from(form.querySelectorAll('input[name="supports"]:checked')).map(function (el) { return el.value; }),
       recursos_disponiveis:value("resources"), frequencia_acompanhamento:value("frequency"),
@@ -133,7 +135,7 @@
     currentReport = String(text || "");
     report.innerHTML = markdownToHtml(currentReport);
     report.hidden = false; empty.hidden = true; disclaimer.hidden = false;
-    copyBtn.disabled = false; printBtn.disabled = false;
+    copyBtn.disabled = false; printBtn.disabled = false; wordBtn.disabled = false;
     setStatus(message || "Proposta pronta para revisão.", kind || "ready");
     document.getElementById("relatorio").scrollIntoView({behavior:"smooth",block:"start"});
   }
@@ -240,6 +242,179 @@
   document.getElementById("previewBtn").addEventListener("click",function () {
     const data = collectData(); if (validate(data)) showReport(makeDemo(data),"Modelo demonstrativo criado localmente. Este exemplo não utiliza IA.","ready");
   });
+
+  function docxRunsFromNode(node, inherited) {
+    const format = Object.assign({}, inherited || {});
+    if (node.nodeType === Node.TEXT_NODE) {
+      return node.nodeValue ? [new docx.TextRun({
+        text: node.nodeValue,
+        bold: !!format.bold,
+        italics: !!format.italics,
+        strike: !!format.strike,
+        font: format.code ? "Consolas" : "Arial",
+        color: format.code ? "53645D" : "263A33"
+      })] : [];
+    }
+    if (node.nodeType !== Node.ELEMENT_NODE) return [];
+    const tag = node.tagName.toLowerCase();
+    if (tag === "strong" || tag === "b") format.bold = true;
+    if (tag === "em" || tag === "i") format.italics = true;
+    if (tag === "s" || tag === "del") format.strike = true;
+    if (tag === "code") format.code = true;
+    return Array.from(node.childNodes).flatMap(function (child) {
+      return docxRunsFromNode(child, format);
+    });
+  }
+
+  function docxParagraphFromElement(element, extra) {
+    const runs = Array.from(element.childNodes).flatMap(function (node) {
+      return docxRunsFromNode(node, {});
+    });
+    return new docx.Paragraph(Object.assign({
+      children: runs.length ? runs : [new docx.TextRun({text: element.textContent || " "})],
+      spacing: { after: 120 }
+    }, extra || {}));
+  }
+
+  function docxTableFromElement(tableElement) {
+    const rows = Array.from(tableElement.querySelectorAll("tr")).map(function (row, rowIndex) {
+      const cells = Array.from(row.children).map(function (cell) {
+        const runs = Array.from(cell.childNodes).flatMap(function (node) {
+          return docxRunsFromNode(node, {bold: cell.tagName.toLowerCase() === "th"});
+        });
+        return new docx.TableCell({
+          children: [new docx.Paragraph({
+            children: runs.length ? runs : [new docx.TextRun({text: cell.textContent || " "})],
+            spacing: {after: 60}
+          })],
+          verticalAlign: docx.VerticalAlign.TOP
+        });
+      });
+      return new docx.TableRow({children: cells});
+    });
+    return new docx.Table({rows: rows});
+  }
+
+  async function exportWordDocument() {
+    if (!currentReport || !report || report.hidden) {
+      setStatus("Gere uma proposta antes de exportar para Word.", "error");
+      return;
+    }
+    if (!window.docx || !window.docx.Document || !window.docx.Packer) {
+      setStatus("O módulo de exportação Word não carregou. Verifique a conexão e atualize a página.", "error");
+      return;
+    }
+
+    const oldLabel = wordBtn.textContent;
+    wordBtn.disabled = true;
+    wordBtn.textContent = "Preparando Word...";
+    try {
+      const children = [];
+      Array.from(report.children).forEach(function (element) {
+        const tag = element.tagName.toLowerCase();
+        if (tag === "h1") {
+          children.push(docxParagraphFromElement(element, {
+            heading: docx.HeadingLevel.HEADING_1,
+            spacing: {before: 100, after: 220}
+          }));
+        } else if (tag === "h2") {
+          children.push(docxParagraphFromElement(element, {
+            heading: docx.HeadingLevel.HEADING_2,
+            spacing: {before: 260, after: 120}
+          }));
+        } else if (tag === "h3") {
+          children.push(docxParagraphFromElement(element, {
+            heading: docx.HeadingLevel.HEADING_3,
+            spacing: {before: 180, after: 80}
+          }));
+        } else if (tag === "p") {
+          children.push(docxParagraphFromElement(element, {
+            alignment: docx.AlignmentType.JUSTIFIED
+          }));
+        } else if (tag === "ul") {
+          Array.from(element.children).forEach(function (item) {
+            children.push(docxParagraphFromElement(item, {
+              bullet: {level: 0},
+              spacing: {after: 70}
+            }));
+          });
+        } else if (tag === "ol") {
+          Array.from(element.children).forEach(function (item, index) {
+            const runs = [new docx.TextRun({text: (index + 1) + ". "})]
+              .concat(Array.from(item.childNodes).flatMap(function (node) {
+                return docxRunsFromNode(node, {});
+              }));
+            children.push(new docx.Paragraph({children: runs, spacing: {after: 70}}));
+          });
+        } else if (tag === "blockquote") {
+          children.push(new docx.Paragraph({
+            children: [new docx.TextRun({text: element.textContent, italics: true, color: "53645D"})],
+            indent: {left: 360},
+            spacing: {before: 100, after: 120}
+          }));
+        } else if (tag === "div" && element.querySelector("table")) {
+          children.push(docxTableFromElement(element.querySelector("table")));
+          children.push(new docx.Paragraph({text: "", spacing: {after: 100}}));
+        } else if (tag === "table") {
+          children.push(docxTableFromElement(element));
+        } else if (tag === "hr") {
+          children.push(new docx.Paragraph({text: " ", thematicBreak: true}));
+        }
+      });
+
+      if (disclaimer && !disclaimer.hidden && disclaimer.textContent.trim()) {
+        children.push(new docx.Paragraph({
+          children: [new docx.TextRun({
+            text: disclaimer.textContent.trim(),
+            italics: true,
+            color: "52665E",
+            size: 18
+          })],
+          spacing: {before: 260, after: 100}
+        }));
+      }
+
+      const document = new docx.Document({
+        creator: "PEI Inteligente",
+        title: "Proposta de Plano Educacional Individualizado",
+        description: "Documento preliminar de apoio pedagógico para revisão da equipe escolar.",
+        sections: [{
+          properties: {
+            page: {
+              size: {width: 11906, height: 16838},
+              margin: {top: 1200, right: 1080, bottom: 1200, left: 1080}
+            }
+          },
+          children: children
+        }]
+      });
+
+      const blob = await docx.Packer.toBlob(document);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      const date = new Date();
+      const stamp = date.getFullYear() + "-" +
+        String(date.getMonth() + 1).padStart(2, "0") + "-" +
+        String(date.getDate()).padStart(2, "0");
+      link.download = "PEI-Inteligente-" + stamp + ".docx";
+      link.style.display = "none";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
+      setStatus("Documento Word (.docx) exportado. Revise a formatação antes de imprimir ou compartilhar.", "ready");
+    } catch (error) {
+      console.error("Falha ao exportar DOCX:", error);
+      setStatus("Não foi possível gerar o arquivo Word. Atualize a página e tente novamente.", "error");
+    } finally {
+      wordBtn.disabled = false;
+      wordBtn.textContent = oldLabel;
+    }
+  }
+
+  wordBtn.addEventListener("click", exportWordDocument);
+
   copyBtn.addEventListener("click",async function () {
     if (!currentReport) return;
     try { await navigator.clipboard.writeText(currentReport); setStatus("Relatório copiado para a área de transferência.","ready"); }
@@ -249,7 +424,7 @@
   document.getElementById("clearBtn").addEventListener("click",function () {
     if (!window.confirm("Deseja limpar os campos preenchidos e remover o relatório atual?")) return;
     form.reset(); currentReport = ""; report.innerHTML = ""; report.hidden = true; disclaimer.hidden = true; empty.hidden = false;
-    copyBtn.disabled = true; printBtn.disabled = true;
+    copyBtn.disabled = true; printBtn.disabled = true; wordBtn.disabled = true;
     setStatus("Formulário limpo. Esta página não salva as informações dos estudantes.","");
     document.getElementById("formulario").scrollIntoView({behavior:"smooth",block:"start"});
   });
