@@ -174,26 +174,32 @@ function shouldSearchBnccComputacao(data) {
     data.conteudo_habilidade,
     data.objetivo_prioritario
   ].join(" "));
-  return /computacao|informatica|programacao|robotica|algoritmo|pensamento computacional|mundo digital|cultura digital/.test(terms);
+  return /computacao|informatica|programacao|robotica|algoritmo|pensamento computacional|mundo digital|cultura digital|padrao.{0,50}sequencia|sequencia.{0,50}padrao|sons.{0,50}movimentos|movimentos.{0,50}sons/.test(terms);
 }
 
-function scoreBnccCandidate(record, queryTokens) {
+function scoreBnccCandidate(record, queryTokens, supportTokens) {
   const tokens = new Set(curriculumTokens(record.texto));
-  const matched = queryTokens.filter(function (term) {
-    if (tokens.has(term)) return true;
-    if (term.length >= 6) {
-      for (const token of tokens) {
-        if (token.length >= 6 && (token.startsWith(term.slice(0, 6)) || term.startsWith(token.slice(0, 6))) ) return true;
+  function findMatches(list) {
+    return (list || []).filter(function (term) {
+      if (tokens.has(term)) return true;
+      if (term.length >= 6) {
+        for (const token of tokens) {
+          if (token.length >= 6 && (token.startsWith(term.slice(0, 6)) || term.startsWith(token.slice(0, 6)))) return true;
+        }
       }
-    }
-    return false;
-  });
+      return false;
+    });
+  }
+  const matched = findMatches(queryTokens);
+  const supportMatched = findMatches(supportTokens || []);
   const coverage = queryTokens.length ? matched.length / queryTokens.length : 0;
+  const supportCoverage = supportTokens && supportTokens.length
+    ? supportMatched.length / supportTokens.length : 0;
   const phrase = normalizeCurriculumText(record.texto).includes(
     normalizeCurriculumText(queryTokens.join(" "))
   );
-  const score = coverage + (phrase ? 0.18 : 0);
-  return {score:score, coverage:coverage, matched:matched};
+  const score = coverage + supportCoverage * 0.15 + (phrase ? 0.18 : 0);
+  return {score:score, coverage:coverage, matched:matched, supportMatched:supportMatched};
 }
 
 function bnccRecordLabel(stage, document) {
@@ -211,9 +217,17 @@ async function searchBnccReferences(data) {
     };
   }
 
-  const primaryText = [data.conteudo_habilidade, data.objetivo_prioritario]
-    .filter(Boolean).join(" ");
-  const queryTokens = Array.from(new Set(curriculumTokens(primaryText)));
+  const contentText = data.conteudo_habilidade || "";
+  const goalText = data.objetivo_prioritario || "";
+  const contentTokens = Array.from(new Set(curriculumTokens(contentText)));
+  const goalTokens = Array.from(new Set(curriculumTokens(goalText)));
+  const queryTokens = contentTokens.length >= 2
+    ? contentTokens
+    : Array.from(new Set(contentTokens.concat(goalTokens)));
+  const supportTokens = contentTokens.length >= 2
+    ? goalTokens.filter(function (term) { return !queryTokens.includes(term); })
+    : [];
+  const primaryText = [contentText, goalText].filter(Boolean).join(" ");
   if (queryTokens.length < 2) {
     return {
       available:false, version:null, stage:stage, matches:[],
@@ -309,7 +323,7 @@ async function searchBnccReferences(data) {
     const groupsById = new Map((structure.recortes_temporais || []).map(function (item) { return [item.id, item]; }));
 
     const matches = records.map(function (record) {
-      const scored = scoreBnccCandidate(record, queryTokens);
+      const scored = scoreBnccCandidate(record, queryTokens, supportTokens);
       const component = record.componente ? componentsById.get(record.componente) : null;
       const areaId = stage === "EM" ? record.area : (component && component.area);
       const area = areaId ? areasById.get(areaId) : null;
@@ -327,6 +341,7 @@ async function searchBnccReferences(data) {
         documento:record.documento_origem || record.documento || null,
         correspondencia:{
           termos_encontrados:scored.matched,
+          termos_de_objetivo_encontrados:scored.supportMatched,
           total_termos_considerados:queryTokens.length,
           indice_textual:Number(scored.score.toFixed(3)),
           classificacao:scored.coverage >= 0.66 && scored.matched.length >= 3
@@ -419,7 +434,11 @@ function formatBnccReferenceSection(result) {
       if (item.grupo_etario) output += "**Grupo etário:** " + item.grupo_etario + ".\n";
       if (item.fonte && item.fonte.localizador_pdf) output += "**Localização na fonte:** " + item.fonte.localizador_pdf + ".\n";
       if (item.fonte && item.fonte.arquivo) output += "**Documento de origem:** " + item.fonte.arquivo + ".\n";
-      output += "**Relação identificada:** " + item.correspondencia.classificacao + " (termos coincidentes: " + item.correspondencia.termos_encontrados.join(", ") + ").\n\n";
+      output += "**Relação identificada:** " + item.correspondencia.classificacao + " (termos coincidentes com o conteúdo: " + item.correspondencia.termos_encontrados.join(", ") + ").\n";
+      if (item.correspondencia.termos_de_objetivo_encontrados && item.correspondencia.termos_de_objetivo_encontrados.length) {
+        output += "**Termos adicionais do objetivo:** " + item.correspondencia.termos_de_objetivo_encontrados.join(", ") + ".\n";
+      }
+      output += "\n";
     });
     output += "*Os textos e códigos acima foram recuperados da base versionada e não foram redigidos pela IA. A proximidade textual é uma sugestão de alinhamento; o professor deve confirmar a pertinência pedagógica e o currículo da rede.*";
   } else {
