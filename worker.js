@@ -1,5 +1,5 @@
 const MAX_BODY_BYTES = 24000;
-const DEFAULT_MODEL = "gpt-6-luna";
+const DEFAULT_MODEL = "openai/gpt-oss-120b";
 
 const INSTRUCTIONS = [
   "Você é um assistente de planejamento pedagógico especializado em educação inclusiva e elaboração de propostas de Plano Educacional Individualizado (PEI), em português brasileiro.",
@@ -93,7 +93,7 @@ export default {
     if (url.pathname !== "/gerar-pei") return json({error:"Rota não encontrada."}, 404, headers);
     if (request.method !== "POST") return json({error:"Método não permitido."}, 405, headers);
     if (origin && !headers["Access-Control-Allow-Origin"]) return json({error:"Origem não autorizada."}, 403, headers);
-    if (!env.OPENAI_API_KEY) return json({error:"A chave da API ainda não foi configurada no servidor."}, 503, headers);
+    if (!env.GROQ_API_KEY) return json({error:"A chave da API ainda não foi configurada no servidor."}, 503, headers);
 
     const declaredLength = Number(request.headers.get("Content-Length") || 0);
     if (declaredLength > MAX_BODY_BYTES) return json({error:"O formulário ultrapassou o tamanho permitido."}, 413, headers);
@@ -119,17 +119,17 @@ export default {
     const inputText = "Elabore uma proposta de PEI com base exclusivamente nestes dados pedagógicos. Não complete informações ausentes por suposição:\n\n" + JSON.stringify(data, null, 2);
 
     try {
-      const aiResponse = await fetch("https://api.openai.com/v1/responses", {
+      const aiResponse = await fetch("https://api.groq.com/openai/v1/responses", {
         method: "POST",
         headers: {
-          "Authorization": "Bearer " + env.OPENAI_API_KEY,
+          "Authorization": "Bearer " + env.GROQ_API_KEY,
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          model: env.OPENAI_MODEL || DEFAULT_MODEL,
+          model: env.GROQ_MODEL || DEFAULT_MODEL,
           instructions: INSTRUCTIONS,
           input: inputText,
-          max_output_tokens: 6500
+          max_output_tokens: 5500
         })
       });
 
@@ -137,15 +137,15 @@ export default {
       if (!aiResponse.ok) {
         const message = responseData && responseData.error && responseData.error.message
           ? responseData.error.message
-          : "O serviço de IA não conseguiu processar a solicitação.";
+          : "O serviço Groq não conseguiu processar a solicitação.";
         return json({error:message}, aiResponse.status === 429 ? 429 : 502, headers);
       }
 
       const pei = extractText(responseData);
       if (!pei) return json({error:"A IA não retornou o texto esperado. Tente novamente."}, 502, headers);
-      return json({pei:pei, model:env.OPENAI_MODEL || DEFAULT_MODEL}, 200, headers);
+      return json({pei:pei, model:env.GROQ_MODEL || DEFAULT_MODEL}, 200, headers);
     } catch (_) {
-      return json({error:"Falha de comunicação com o serviço de IA. Verifique a conexão e tente novamente."}, 502, headers);
+      return json({error:"Falha de comunicação com o serviço Groq. Verifique a conexão e tente novamente."}, 502, headers);
     }
   }
 };
