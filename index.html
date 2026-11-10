@@ -64,6 +64,8 @@ footer{max-width:1200px;margin:auto;padding:0 20px 30px;color:var(--muted);font-
 <div class="field"><label for="area">Área do conhecimento</label><select id="area"><option value="">Selecione</option><option>Linguagens</option><option>Matemática</option><option>Ciências da Natureza</option><option>Ciências Humanas</option><option>Educação Infantil</option><option>Outra / interdisciplinar</option></select></div>
 <div class="field"><label for="subject">Componente curricular</label><input id="subject" maxlength="80" placeholder="Ex.: Matemática"></div>
 <div class="field full"><label for="topic">Conteúdo ou habilidade curricular trabalhada</label><textarea class="short" id="topic" placeholder="Ex.: resolver situações de adição e subtração em contextos do cotidiano."></textarea></div>
+<div class="field"><label for="bnccCode">Código da BNCC (opcional)</label><input id="bnccCode" maxlength="30" placeholder="Cole o código da fonte oficial"></div>
+<div class="field full"><label for="bnccDescription">Descrição oficial da habilidade (opcional)</label><textarea class="short" id="bnccDescription" maxlength="2500" placeholder="Cole a descrição oficial da habilidade, sem resumir."></textarea><span class="hint">A IA não criará nem completará códigos ou descrições. <a href="https://basenacionalcomum.mec.gov.br/" target="_blank" rel="noopener noreferrer">Consultar portal oficial da BNCC</a> · <a href="https://downloadbncc.mec.gov.br/" target="_blank" rel="noopener noreferrer">Baixar habilidades oficiais</a></span></div>
 <div class="field full"><label for="goal">Objetivo de aprendizagem prioritário</label><textarea id="goal" placeholder="O que se espera que o estudante aprenda ou consiga realizar ao final do período?"></textarea></div>
 <div class="field full"><label for="observations">Outras observações pedagógicas relevantes</label><textarea class="short" id="observations" placeholder="Registre informações úteis, sem inserir laudos ou dados pessoais sensíveis."></textarea></div>
 </div></fieldset>
@@ -87,10 +89,11 @@ footer{max-width:1200px;margin:auto;padding:0 20px 30px;color:var(--muted);font-
 <div class="actions"><button class="btn primary" id="generateBtn" type="submit">✦ Gerar proposta com IA</button><button class="btn soft" id="previewBtn" type="button">Visualizar modelo demonstrativo</button><button class="btn plain" id="clearBtn" type="button">Limpar formulário</button></div>
 
 </form></section>
-<section class="panel report-panel" id="relatorio"><div class="panel-head report-head"><div><h2>Proposta de PEI</h2><p>O relatório aparecerá nesta área.</p></div><div class="report-actions"><button class="btn plain" id="copyBtn" type="button" disabled>Copiar</button><button class="btn plain" id="printBtn" type="button" disabled>Imprimir / PDF</button></div></div>
+<section class="panel report-panel" id="relatorio"><div class="panel-head report-head"><div><h2>Proposta de PEI</h2><p>O relatório aparecerá nesta área.</p></div><div class="report-actions"><button class="btn soft" id="wordBtn" type="button" disabled>Exportar Word (.docx)</button><button class="btn plain" id="copyBtn" type="button" disabled>Copiar</button><button class="btn plain" id="printBtn" type="button" disabled>Imprimir / PDF</button></div></div>
 <div class="status" id="status" role="status" aria-live="polite"><span class="dot"></span><span id="statusText">Aguardando informações do formulário.</span></div>
 <div class="report-body"><div class="empty" id="emptyState"><div class="empty-icon">✧</div><h3>Seu planejamento começa aqui</h3><p>Preencha as informações pedagógicas e gere uma proposta. Você também pode abrir um exemplo demonstrativo para conhecer a estrutura do relatório.</p></div><article class="report-content" id="reportContent" hidden></article><div class="disclaimer" id="reportDisclaimer" hidden>Documento de apoio pedagógico. A proposta gerada pela IA deve ser revisada, contextualizada e validada pelo professor e pela equipe escolar. Não constitui diagnóstico nem substitui avaliações especializadas.</div></div></section>
 </div></main>
 <footer><span>PEI Inteligente · Projeto educacional em desenvolvimento.</span><span>Planejamento com respeito às singularidades e ao direito de aprender.</span></footer>
-<script src="app.js?v=20261110-2"></script>
+<script src="https://unpkg.com/docx@9.15.3/dist/index.iife.js"></script>
+<script src="app.js?v=20261110-3"></script>
 </body></html>
