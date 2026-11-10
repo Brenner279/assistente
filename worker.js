@@ -481,7 +481,8 @@ async function callWorkersAI(env, messages, maxCompletionTokens, jsonMode) {
   const options = {
     messages:messages,
     max_completion_tokens:maxCompletionTokens,
-    temperature:0.2
+    temperature:0.2,
+    chat_template_kwargs:{enable_thinking:false}
   };
   if (jsonMode) options.response_format = {type:"json_object"};
 
@@ -497,7 +498,15 @@ async function callWorkersAI(env, messages, maxCompletionTokens, jsonMode) {
   }
 
   const text = extractWorkersAIText(result);
-  if (!text) throw new Error("O Cloudflare Workers AI não retornou texto. Verifique se o modelo está disponível para a conta.");
+  if (!text) {
+    const responseShape = result && typeof result === "object"
+      ? Object.keys(result).slice(0,12).join(", ")
+      : typeof result;
+    throw new Error("O modelo " + WORKERS_AI_MODEL +
+      " respondeu sem conteúdo textual. Campos recebidos: " +
+      (responseShape || "nenhum") +
+      ". Verifique a execução no painel Workers AI; o modo de raciocínio foi desativado nesta versão.");
+  }
   return {text:text,model:WORKERS_AI_MODEL,usage:result && result.usage ? result.usage : null};
 }
 
