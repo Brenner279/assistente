@@ -122,9 +122,9 @@ function curriculumTokens(value) {
 
 function detectBnccStage(data) {
   const text = normalizeCurriculumText((data.etapa_ano || "") + " " + (data.turma || ""));
-  if (/educacao infantil|pre escola|creche|bercario/.test(text)) return "EI";
-  if (/ensino medio|\bmedio\b/.test(text)) return "EM";
-  if (/ensino fundamental|\bfundamental\b/.test(text)) return "EF";
+  if (/educacao infantil|pre escola|creche|bercario|\bei\b/.test(text)) return "EI";
+  if (/ensino medio|\bmedio\b|\bem\b/.test(text)) return "EM";
+  if (/ensino fundamental|\bfundamental\b|\bef\b/.test(text)) return "EF";
   return null;
 }
 
@@ -211,11 +211,9 @@ async function searchBnccReferences(data) {
     };
   }
 
-  const primaryText = data.conteudo_habilidade || data.objetivo_prioritario || "";
-  let queryTokens = Array.from(new Set(curriculumTokens(primaryText)));
-  if (queryTokens.length < 2 && data.objetivo_prioritario && primaryText !== data.objetivo_prioritario) {
-    queryTokens = Array.from(new Set(queryTokens.concat(curriculumTokens(data.objetivo_prioritario))));
-  }
+  const primaryText = [data.conteudo_habilidade, data.objetivo_prioritario]
+    .filter(Boolean).join(" ");
+  const queryTokens = Array.from(new Set(curriculumTokens(primaryText)));
   if (queryTokens.length < 2) {
     return {
       available:false, version:null, stage:stage, matches:[],
@@ -284,7 +282,7 @@ async function searchBnccReferences(data) {
       let groupId = null;
       if (/bebe|0 a 1|0 a 1 ano/.test(groupText)) groupId = "ei-grupo-01";
       else if (/bem pequena|1 a 3|1 a 3 anos/.test(groupText)) groupId = "ei-grupo-02";
-      else if (/crianca pequena|pre escola|4 a 5|4 a 5 anos/.test(groupText)) groupId = "ei-grupo-03";
+      else if (/criancas? pequenas?|pre escola|4 a 5|4 a 5 anos/.test(groupText)) groupId = "ei-grupo-03";
       if (groupId) {
         groupWasSpecified = true;
         records = records.filter(function (item) { return item.grupo_etario === groupId; });
