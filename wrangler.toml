@@ -8,3 +8,6 @@ GROQ_MODEL = "openai/gpt-oss-120b"
 
 # Opcional: configure outra origem HTTPS no painel do Worker.
 # ALLOWED_ORIGIN = "https://seu-dominio.com"
+
+[ai]
+binding = "AI"
