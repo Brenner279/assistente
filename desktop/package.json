@@ -1,0 +1,47 @@
+{
+  "name": "pei-inteligente-desktop",
+  "version": "1.0.0",
+  "description": "Aplicativo desktop do PEI Inteligente para Windows",
+  "private": true,
+  "main": "main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "dist:win": "electron-builder --win nsis --x64"
+  },
+  "devDependencies": {
+    "electron": "45.3.0",
+    "electron-builder": "26.16.1"
+  },
+  "build": {
+    "appId": "br.com.peiinteligente.desktop",
+    "productName": "PEI Inteligente",
+    "asar": true,
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.cjs",
+      "shell.html",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "PEI-Inteligente-Setup-${version}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "PEI Inteligente"
+    }
+  }
+}
