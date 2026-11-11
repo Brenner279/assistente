@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PEI Inteligente</title>
+  <style>
+    *{box-sizing:border-box}
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;font-family:Segoe UI,Arial,sans-serif;background:#f5f8f6;color:#17332b}
+    .bar{height:52px;display:flex;align-items:center;gap:12px;padding:0 16px;background:#fff;border-bottom:1px solid #dce7e1}
+    .logo{width:31px;height:31px;display:grid;place-items:center;border-radius:9px;background:#176b57;color:#fff;font-weight:800;font-size:11px}
+    .brand{font-size:14px;font-weight:800;letter-spacing:-.02em}
+    .subtitle{font-size:10px;color:#647773;margin-left:4px;font-weight:500}
+    .spacer{flex:1}
+    button{border:1px solid #dce7e1;background:#f4f8f5;color:#214d40;border-radius:8px;padding:7px 11px;font-weight:700;cursor:pointer}
+    button:hover{background:#eaf5f0}
+    .stage{height:calc(100% - 52px);position:relative}
+    webview{display:flex;width:100%;height:100%;border:0;background:#f5f8f6}
+    .offline{display:none;position:absolute;inset:0;z-index:2;background:#f5f8f6;align-items:center;justify-content:center;padding:28px;text-align:center}
+    .offline.show{display:flex}
+    .message{max-width:480px;background:#fff;border:1px solid #dce7e1;border-radius:18px;padding:30px;box-shadow:0 12px 35px #14392f0d}
+    .message h1{font-size:21px;margin:0 0 9px;color:#124d42}
+    .message p{font-size:13px;line-height:1.6;color:#647773;margin:0 0 18px}
+    .message button{background:#176b57;color:white;border:0;padding:10px 16px}
+    .foot{font-size:10px;color:#81918b;margin-top:16px}
+  </style>
+</head>
+<body>
+  <header class="bar">
+    <div class="logo">PEI</div>
+    <div class="brand">PEI Inteligente <span class="subtitle">Aplicativo para Windows · requer internet</span></div>
+    <div class="spacer"></div>
+    <button id="reload" type="button" title="Recarregar o sistema">Recarregar</button>
+  </header>
+  <main class="stage">
+    <webview id="pei" src="https://brenner279.github.io/assistente/" partition="persist:pei" webpreferences="nodeIntegration=no,contextIsolation=yes,sandbox=yes"></webview>
+    <section id="offline" class="offline" aria-live="polite">
+      <div class="message">
+        <h1>Não foi possível acessar o PEI Inteligente</h1>
+        <p>Verifique se o computador está conectado à internet. O aplicativo precisa acessar o site e os serviços online de inteligência artificial para gerar os documentos.</p>
+        <button id="retry" type="button">Tentar novamente</button>
+        <div class="foot">Se a conexão já estiver ativa, aguarde alguns instantes e tente novamente.</div>
+      </div>
+    </section>
+  </main>
+  <script>
+    const view = document.getElementById("pei");
+    const offline = document.getElementById("offline");
+    const retry = () => { offline.classList.remove("show"); view.src = "https://brenner279.github.io/assistente/"; };
+    document.getElementById("reload").addEventListener("click", () => {
+      offline.classList.remove("show");
+      try { view.reload(); } catch { retry(); }
+    });
+    document.getElementById("retry").addEventListener("click", retry);
+    view.addEventListener("did-finish-load", () => offline.classList.remove("show"));
+    view.addEventListener("did-fail-load", event => {
+      if (event.isMainFrame && event.errorCode !== -3) offline.classList.add("show");
+    });
+    view.addEventListener("render-process-gone", () => offline.classList.add("show"));
+  </script>
+</body>
+</html>
